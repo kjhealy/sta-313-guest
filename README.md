@@ -1,8 +1,7 @@
 
-# sta-313-guest
+# STA/ISS 313 Guest Lecture
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of sta-313-guest is to ...
-
+Supporting materials and slides.
