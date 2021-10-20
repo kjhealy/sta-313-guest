@@ -285,7 +285,7 @@ p_out
 
 ---
 
-# Reorder the facets
+# .kjh-pink[Reorder] the facets
 
 ```{r}
 p_out <- df %>% 
@@ -302,6 +302,8 @@ p_out <- df %>%
 ```
 
 ---
+
+# .kjh-pink[Reorder] the facets
 
 ```{r, fig.height=8, fig.width=20}
 p_out
@@ -321,7 +323,7 @@ class: title title-1
 
 ---
 
-# Patchwork
+# .kjh-green[Patchwork]
 
 ```{r}
 p1 <- ggplot(mpg) + 
@@ -350,7 +352,7 @@ p1 + p2 + p3 + guide_area() + plot_layout(ncol = 2, guides = "collect")
 
 ---
 
-# US COVID Mortality in 2020
+# US .kjh-yellow[COVID Mortality] in 2020
 
 ```{r}
 nchs_wdc
@@ -358,7 +360,7 @@ nchs_wdc
 
 ---
 
-# US COVID Mortality in 2020
+# US .kjh-yellow[COVID Mortality] in 2020
 
 ```{r}
 start_week <- 1
@@ -374,7 +376,7 @@ states
 ---
 
 
-# US COVID Mortality in 2020
+# US .kjh-yellow[COVID Mortality] in 2020
 
 
 ```{r}
@@ -388,7 +390,7 @@ dat
 
 ---
 
-# US COVID Mortality in 2020
+# US .kjh-yellow[COVID Mortality] in 2020
 
 
 ```{r}
@@ -402,7 +404,7 @@ average_deaths
 
 ---
 
-# US COVID Mortality in 2020
+# US .kjh-yellow[COVID Mortality] in 2020
 
 
 ```{r}
@@ -597,7 +599,7 @@ out
 
 ---
 
-# Now the fun() part
+# Now the .kjh-green[fun()] part
 
 ```{r}
 patch_state_count <- function(state) {
@@ -728,7 +730,7 @@ patch_state_percent <- function(state, nc = 2){
 
 ```
 
-# Now wrap those up too 
+# Now wrap those up, too 
 
 ```{r}
 make_patchplot <- function(state){
@@ -794,7 +796,7 @@ states
 
 ---
 
-# Map the function to the jurisdictions
+# .kjh-yellow[Map] the function to the jurisdictions
 
 ```{r, warning=FALSE}
 out_patch <- states %>%
@@ -806,7 +808,7 @@ out_patch
 
 ---
 
-# Map the function to the jurisdictions
+# .kjh-yellow[Map] the function to the jurisdictions
 
 ```{r, warning=FALSE}
 out_patch %>% 
@@ -854,9 +856,4 @@ figures
 ├── illinois_patch.png
 
 ```
-
-
-
-
-
 
