@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>STA/ISS 313 - Facets and Compounding</title>
+    <title>STA/ISS 313 - Facets and Patchwork</title>
     <meta charset="utf-8" />
     <meta name="author" content="Kieran Healy" />
     <meta name="date" content="2021-10-19" />
@@ -31,7 +31,7 @@
 
 class: center middle main-title section-title-1
 
-# .kjh-yellow[Faceting] and .kjh-green[Patchworking]  
+# .kjh-yellow[Faceting] and .kjh-green[Patchwork]  
 
 .class-info[
 
@@ -69,11 +69,6 @@ library(socviz)    # data and some useful functions
 ## remotes::install_github("kjhealy/covdata") 
 library(covdata) 
 
-## Some demographic data: https://kjhealy.github.io/demog
-## remotes::install_github("kjhealy/demog") 
-library(demog) 
-
-
 ## Some penguins
 library(palmerpenguins)
 ```
@@ -84,7 +79,7 @@ library(palmerpenguins)
 layout: false
 class: main-title main-title-inv
 
-# .middle.squish4[.kjh-orange[We've put a lot of pieces in place at this point]]
+# .middle.squish4[.kjh-orange[Informatively Presenting a Lot of Data at Once]]
 
 ---
 
@@ -199,6 +194,929 @@ stmf
 
 
 ![:scale 70%](img/stmf.png)]
+
+---
+
+# What we're interested in 
+
+
+```r
+stmf %&gt;%
+    filter(sex == "b", year &gt; 2014 &amp; year &lt; 2020) %&gt;% 
+    select(cname, iso3, year:sex, age_group, death_rate, rate_total)
+```
+
+```
+## # A tibble: 49,045 × 8
+##    cname     iso3   year  week sex   age_group death_rate rate_total
+##    &lt;chr&gt;     &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;          &lt;dbl&gt;      &lt;dbl&gt;
+##  1 Australia AUS    2015     1 b     0-14        0.000136    0.00548
+##  2 Australia AUS    2015     1 b     15-64       0.00116     0.00548
+##  3 Australia AUS    2015     1 b     65-74       0.00927     0.00548
+##  4 Australia AUS    2015     1 b     75-84       0.0347      0.00548
+##  5 Australia AUS    2015     1 b     85+         0.119       0.00548
+##  6 Australia AUS    2015     2 b     0-14        0.000146    0.00517
+##  7 Australia AUS    2015     2 b     15-64       0.00104     0.00517
+##  8 Australia AUS    2015     2 b     65-74       0.00940     0.00517
+##  9 Australia AUS    2015     2 b     75-84       0.0305      0.00517
+## 10 Australia AUS    2015     2 b     85+         0.116       0.00517
+## # … with 49,035 more rows
+```
+
+
+---
+
+# Mortality rankings: mean and max 
+
+
+```r
+rate_rank &lt;- stmf %&gt;%
+  filter(sex == "b", year &gt; 2014 &amp; year &lt; 2020) %&gt;%
+  group_by(country_code) %&gt;%
+  summarize(mean_rate = mean(rate_total, na.rm = TRUE)) %&gt;%
+  mutate(rate_rank = rank(mean_rate))
+
+
+rate_max_rank &lt;- stmf %&gt;%
+  filter(sex == "b", year == 2020) %&gt;%
+  group_by(country_code) %&gt;%
+  summarize(covid_max = max(rate_total, na.rm = TRUE)) %&gt;%
+  mutate(covid_max_rank = rank(covid_max))
+```
+
+---
+
+# Mortality rankings: mean and max 
+
+.pull-left[
+
+```r
+rate_rank
+```
+
+```
+## # A tibble: 38 × 3
+##    country_code mean_rate rate_rank
+##    &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;
+##  1 AUS            0.00572         4
+##  2 AUT            0.00923        19
+##  3 BEL            0.00960        21
+##  4 BGR            0.0153         38
+##  5 CAN            0.00751         9
+##  6 CHE            0.00790        11
+##  7 CHL            0.00570         3
+##  8 CZE            0.0104         26
+##  9 DEUTNP         0.0113         30
+## 10 DNK            0.00928        20
+## # … with 28 more rows
+```
+]
+
+.pull-right[
+
+```r
+rate_max_rank
+```
+
+```
+## # A tibble: 38 × 3
+##    country_code covid_max covid_max_rank
+##    &lt;chr&gt;            &lt;dbl&gt;          &lt;dbl&gt;
+##  1 AUS            0.00628              1
+##  2 AUT            0.0149              18
+##  3 BEL            0.0195              26
+##  4 BGR            0.0356              38
+##  5 CAN            0.00963              8
+##  6 CHE            0.0134              15
+##  7 CHL            0.0109               9
+##  8 CZE            0.0206              31
+##  9 DEUTNP         0.0161              22
+## 10 DNK            0.0114              12
+## # … with 28 more rows
+```
+]
+
+---
+
+# Select the columns; merge the ranks
+
+.SMALL[
+
+```r
+df &lt;- stmf %&gt;%
+  filter(sex == "b", year &gt; 2014, year &lt; 2021,
+         country_code %in% c("AUT", "BEL", "CHE", "DEUTNP", "DNK", "ESP", "FIN", "FRATNP", "GBR_SCO", "GBRTENW",
+                             "GRC", "HUN", "ITA", "LUX", "POL", "NLD", "NOR", "PRT", "SWE", "USA")) %&gt;%
+  filter(!(year == 2020 &amp; week &gt; 53)) %&gt;%
+  group_by(cname, year, week) %&gt;%
+  mutate(yr_ind = year %in% 2020) %&gt;%
+  slice(1) %&gt;%
+  left_join(rate_rank, by = "country_code") %&gt;%
+  left_join(rate_max_rank, by = "country_code")
+
+df
+```
+
+```
+## # A tibble: 6,226 × 22
+## # Groups:   cname, year, week [6,226]
+##    country_code cname   iso2  continent iso3   year  week sex   split split_sex
+##    &lt;chr&gt;        &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;     &lt;dbl&gt;
+##  1 AUT          Austria AT    Europe    AUT    2015     1 b         0         0
+##  2 AUT          Austria AT    Europe    AUT    2015     2 b         0         0
+##  3 AUT          Austria AT    Europe    AUT    2015     3 b         0         0
+##  4 AUT          Austria AT    Europe    AUT    2015     4 b         0         0
+##  5 AUT          Austria AT    Europe    AUT    2015     5 b         0         0
+##  6 AUT          Austria AT    Europe    AUT    2015     6 b         0         0
+##  7 AUT          Austria AT    Europe    AUT    2015     7 b         0         0
+##  8 AUT          Austria AT    Europe    AUT    2015     8 b         0         0
+##  9 AUT          Austria AT    Europe    AUT    2015     9 b         0         0
+## 10 AUT          Austria AT    Europe    AUT    2015    10 b         0         0
+## # … with 6,216 more rows, and 12 more variables: forecast &lt;dbl&gt;,
+## #   approx_date &lt;date&gt;, age_group &lt;chr&gt;, death_count &lt;dbl&gt;, death_rate &lt;dbl&gt;,
+## #   deaths_total &lt;dbl&gt;, rate_total &lt;dbl&gt;, yr_ind &lt;lgl&gt;, mean_rate &lt;dbl&gt;,
+## #   rate_rank &lt;dbl&gt;, covid_max &lt;dbl&gt;, covid_max_rank &lt;dbl&gt;
+```
+]
+
+---
+
+# And make a plot
+
+
+```r
+p_out &lt;- df %&gt;% 
+  ggplot(aes(x = week, y = rate_total, color = yr_ind, group = year)) +
+  scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+  scale_x_continuous(limits = c(1, 52),
+                     breaks = c(1, seq(10, 50, 10)),
+                     labels = as.character(c(1, seq(10, 50, 10)))) +
+  facet_wrap(~ cname, ncol = 10) +
+  geom_line(size = 0.9) +
+  labs(x = "Week of the Year", y = "Total Death Rate",
+       color = "Year", title = "Overall Weekly Death Rates",
+       caption = "Graph: @kjhealy. Data: Human Mortality Database, mortality.org")
+```
+
+---
+
+# And make a plot
+
+
+```r
+p_out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-13-1.png" width="1440" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Reorder the facets
+
+
+```r
+p_out &lt;- df %&gt;% 
+  ggplot(aes(x = week, y = rate_total, color = yr_ind, group = year)) +
+  scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+  scale_x_continuous(limits = c(1, 52),
+                     breaks = c(1, seq(10, 50, 10)),
+                     labels = as.character(c(1, seq(10, 50, 10)))) +
+  geom_line(size = 0.9) +
+* facet_wrap(~ reorder(cname, rate_rank, na.rm = TRUE), ncol = 10) +
+  labs(x = "Week of the Year", y = "Total Death Rate",
+       color = "Year", title = "Overall Weekly Death Rates",
+       caption = "Graph: @kjhealy. Data: Human Mortality Database, mortality.org")
+```
+
+---
+
+
+```r
+p_out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-15-1.png" width="1440" style="display: block; margin: auto;" /&gt;
+
+---
+
+layout: false
+class: main-title main-title-inv
+
+![:scale 87%](img/national_mortality_rates-wide.png)
+
+---
+
+layout: true
+class: title title-1
+
+---
+
+# Patchwork
+
+
+```r
+p1 &lt;- ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy))
+
+p2 &lt;- ggplot(mpg) + 
+  geom_bar(aes(x = as.character(year), fill = drv), position = "dodge") + 
+  labs(x = "year")
+
+p3 &lt;- ggplot(mpg) + 
+  geom_density(aes(x = hwy, fill = drv), colour = NA) + 
+  facet_grid(rows = vars(drv))
+
+p4 &lt;- ggplot(mpg) + 
+  stat_summary(aes(x = drv, y = hwy, fill = drv), geom = "col", fun.data = mean_se) +
+  stat_summary(aes(x = drv, y = hwy), geom = "errorbar", fun.data = mean_se, width = 0.5)
+```
+
+---
+
+# Patchwork
+
+
+```r
+p1 + p2 + p3 + guide_area() + plot_layout(ncol = 2, guides = "collect")
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-17-1.png" width="576" style="display: block; margin: auto;" /&gt;
+
+---
+
+# US COVID Mortality in 2020
+
+
+```r
+nchs_wdc
+```
+
+```
+## # A tibble: 289,386 × 7
+##    jurisdiction  year  week week_ending_date cause_detailed           n cause   
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;date&gt;           &lt;chr&gt;                &lt;dbl&gt; &lt;chr&gt;   
+##  1 Alabama       2014     1 2014-01-04       All Cause             1057 All Cau…
+##  2 Alabama       2014     1 2014-01-04       Alzheimer disease (…    38 Alzheim…
+##  3 Alabama       2014     1 2014-01-04       Cerebrovascular dis…    51 Cerebro…
+##  4 Alabama       2014     1 2014-01-04       Chronic lower respi…    66 Chronic…
+##  5 Alabama       2014     1 2014-01-04       Diabetes mellitus (…    29 Diabetes
+##  6 Alabama       2014     1 2014-01-04       Diseases of heart (…   264 Disease…
+##  7 Alabama       2014     1 2014-01-04       Influenza and pneum…    38 Influen…
+##  8 Alabama       2014     1 2014-01-04       Malignant neoplasms…   196 Cancer  
+##  9 Alabama       2014     1 2014-01-04       Natural Cause          992 Natural…
+## 10 Alabama       2014     1 2014-01-04       Nephritis, nephroti…    21 Kidney …
+## # … with 289,376 more rows
+```
+
+---
+
+# US COVID Mortality in 2020
+
+
+```r
+start_week &lt;- 1
+end_week &lt;- 53
+
+states &lt;- nchs_wdc %&gt;%
+  select(jurisdiction) %&gt;%
+  unique()
+
+states
+```
+
+```
+## # A tibble: 54 × 1
+##    jurisdiction        
+##    &lt;chr&gt;               
+##  1 Alabama             
+##  2 Alaska              
+##  3 Arizona             
+##  4 Arkansas            
+##  5 California          
+##  6 Colorado            
+##  7 Connecticut         
+##  8 Delaware            
+##  9 District of Columbia
+## 10 Florida             
+## # … with 44 more rows
+```
+
+---
+
+
+# US COVID Mortality in 2020
+
+
+
+```r
+dat &lt;- nchs_wdc %&gt;%
+  filter(year &gt; 2014, year &lt; 2021) %&gt;%
+  mutate(month_label = lubridate::month(week_ending_date, label = TRUE))
+
+dat
+```
+
+```
+## # A tibble: 225,450 × 8
+##    jurisdiction  year  week week_ending_date cause_detailed           n cause   
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;date&gt;           &lt;chr&gt;                &lt;dbl&gt; &lt;chr&gt;   
+##  1 Alabama       2015     1 2015-01-10       All Cause             1139 All Cau…
+##  2 Alabama       2015     1 2015-01-10       Alzheimer disease (…    59 Alzheim…
+##  3 Alabama       2015     1 2015-01-10       Cerebrovascular dis…    48 Cerebro…
+##  4 Alabama       2015     1 2015-01-10       Chronic lower respi…    73 Chronic…
+##  5 Alabama       2015     1 2015-01-10       Diabetes mellitus (…    36 Diabetes
+##  6 Alabama       2015     1 2015-01-10       Diseases of heart (…   273 Disease…
+##  7 Alabama       2015     1 2015-01-10       Influenza and pneum…    48 Influen…
+##  8 Alabama       2015     1 2015-01-10       Malignant neoplasms…   200 Cancer  
+##  9 Alabama       2015     1 2015-01-10       Natural Cause         1069 Natural…
+## 10 Alabama       2015     1 2015-01-10       Nephritis, nephroti…    26 Kidney …
+## # … with 225,440 more rows, and 1 more variable: month_label &lt;ord&gt;
+```
+
+---
+
+# US COVID Mortality in 2020
+
+
+
+```r
+average_deaths &lt;- nchs_wdc %&gt;%
+  filter(year %in% c(2015:2019)) %&gt;%
+  group_by(jurisdiction, week, cause) %&gt;%
+  summarize(average_wk_deaths = mean(n, na.rm = TRUE))
+
+average_deaths
+```
+
+```
+## # A tibble: 36,504 × 4
+## # Groups:   jurisdiction, week [2,808]
+##    jurisdiction  week cause                              average_wk_deaths
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;                                          &lt;dbl&gt;
+##  1 Alabama          1 All Cause                                     1119. 
+##  2 Alabama          1 Alzheimer's                                     56.2
+##  3 Alabama          1 Cancer                                         206  
+##  4 Alabama          1 Cerebrovascular Diseases                        55.2
+##  5 Alabama          1 Chronic Lower Respiratory Diseases              76.6
+##  6 Alabama          1 Diabetes                                        29.8
+##  7 Alabama          1 Diseases of the Heart                          282. 
+##  8 Alabama          1 Influenza and Pneumonia                         33.6
+##  9 Alabama          1 Kidney Diseases                                 20.4
+## 10 Alabama          1 Natural Causes                                1042. 
+## # … with 36,494 more rows
+```
+
+---
+
+# US COVID Mortality in 2020
+
+
+
+```r
+df &lt;- left_join(dat, average_deaths) %&gt;%
+  select(everything(), n, average_wk_deaths) %&gt;%
+  mutate(n_diff = n - average_wk_deaths,
+         pct_diff = (n_diff / n)*100) %&gt;%
+  filter(cause %nin% c("Natural Causes", "Other"))
+
+df
+```
+
+```
+## # A tibble: 191,646 × 11
+##    jurisdiction  year  week week_ending_date cause_detailed           n cause   
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;date&gt;           &lt;chr&gt;                &lt;dbl&gt; &lt;chr&gt;   
+##  1 Alabama       2015     1 2015-01-10       All Cause             1139 All Cau…
+##  2 Alabama       2015     1 2015-01-10       Alzheimer disease (…    59 Alzheim…
+##  3 Alabama       2015     1 2015-01-10       Cerebrovascular dis…    48 Cerebro…
+##  4 Alabama       2015     1 2015-01-10       Chronic lower respi…    73 Chronic…
+##  5 Alabama       2015     1 2015-01-10       Diabetes mellitus (…    36 Diabetes
+##  6 Alabama       2015     1 2015-01-10       Diseases of heart (…   273 Disease…
+##  7 Alabama       2015     1 2015-01-10       Influenza and pneum…    48 Influen…
+##  8 Alabama       2015     1 2015-01-10       Malignant neoplasms…   200 Cancer  
+##  9 Alabama       2015     1 2015-01-10       Nephritis, nephroti…    26 Kidney …
+## 10 Alabama       2015     1 2015-01-10       Other diseases of r…    30 Other R…
+## # … with 191,636 more rows, and 4 more variables: month_label &lt;ord&gt;,
+## #   average_wk_deaths &lt;dbl&gt;, n_diff &lt;dbl&gt;, pct_diff &lt;dbl&gt;
+```
+
+---
+
+# Getting set up
+
+
+```r
+nwks &lt;- 53
+
+season_label &lt;- tibble(wk_num = lubridate::epiweek(as.Date(c("2020-03-01",
+                                                             "2020-06-01",
+                                                             "2020-09-01",
+                                                             "2020-12-01"))),
+                       season_lab = c("Spring", "Summer", "Autumn", "Winter"))
+
+season_label
+```
+
+```
+## # A tibble: 4 × 2
+##   wk_num season_lab
+##    &lt;dbl&gt; &lt;chr&gt;     
+## 1     10 Spring    
+## 2     23 Summer    
+## 3     36 Autumn    
+## 4     49 Winter
+```
+
+---
+
+# Getting set up
+
+
+```r
+month_label &lt;- tibble(wk_num = lubridate::epiweek(lubridate::ymd("2020-01-15") + months(0:11)),
+                      month_lab = as.character(lubridate::month(lubridate::ymd("2020-01-15") +
+                                                                  months(0:11), label = TRUE)))
+
+month_label
+```
+
+```
+## # A tibble: 12 × 2
+##    wk_num month_lab
+##     &lt;dbl&gt; &lt;chr&gt;    
+##  1      3 Jan      
+##  2      7 Feb      
+##  3     12 Mar      
+##  4     16 Apr      
+##  5     20 May      
+##  6     25 Jun      
+##  7     29 Jul      
+##  8     33 Aug      
+##  9     38 Sep      
+## 10     42 Oct      
+## 11     47 Nov      
+## 12     51 Dec
+```
+
+
+
+---
+
+# Panel 1
+
+
+```r
+out &lt;- df %&gt;%
+    filter(year &lt; 2021, jurisdiction %in% "New York City", cause == "All Cause") %&gt;%
+    group_by(year, week) %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(!(year == 2020 &amp; week &gt; nwks)) %&gt;%
+    ggplot(aes(x = week, y = n, color = yr_ind, group = year)) +
+    geom_line(size = 0.9) +
+    scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+    scale_x_continuous(breaks = month_label$wk_num, labels = month_label$month_lab) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = NULL,
+         y = "Total Deaths",
+         color = "Years",
+         title = "Weekly recorded deaths from all causes",
+         subtitle = "Raw Counts. Provisional Data.")
+```
+
+---
+
+# Panel 1
+
+
+```r
+out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-27-1.png" width="60%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Panel 2
+
+
+```r
+  out &lt;- df %&gt;%
+    filter(year &lt; 2021) %&gt;%
+    filter(jurisdiction %in% "North Carolina", cause %in% c("COVID-19 Multiple cause")) %&gt;%
+    group_by(year, week) %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(year == 2020) %&gt;%
+    ggplot(aes(x = week, y = n, group = year)) +
+    geom_col(fill = "gray30") +
+    scale_x_continuous(breaks = c(1, 10, 20, 30, 40, 50),
+                       labels = as.character(c(1, 10, 20, 30, 40, 50)),
+                       limits = c(1, 52)) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = "Week of the Year",
+         y = "Total Deaths",
+         color = "Years",
+         subtitle = "Raw counts.",
+         title = "Weekly deaths recorded as COVID-19 (Multiple cause)")
+```
+
+---
+
+# Panel 2
+
+
+```r
+out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-29-1.png" width="90%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Panel 3
+
+
+```r
+panel_ordering &lt;- order_panels(st = "California")
+
+out &lt;- df %&gt;%
+    filter(year &lt; 2021,
+           jurisdiction == "California",
+           cause %nin% c("All Cause", "COVID-19 Multiple cause", "COVID-19 Underlying")) %&gt;%
+    group_by(cause, year, week) %&gt;%
+    summarize(deaths = sum(n, na.rm = TRUE), .groups = "drop") %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(!(year == 2020 &amp; week &gt; nwks)) %&gt;%
+    left_join(panel_ordering, by = "cause") %&gt;%
+    ggplot(aes(x = week, y = deaths, color = yr_ind)) +
+    geom_line(size = 0.9, mapping = aes(group = year)) +
+    scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+    scale_x_continuous(breaks = c(1, 10, 20, 30, 40, 50), labels = as.character(c(1, 10, 20, 30, 40, 50))) +
+    scale_y_continuous(labels = scales::comma) +
+    facet_wrap(~ cause_ord, ncol = 2, labeller = label_wrap_gen(25)) +
+    labs(x = "Week of the Year",
+         y = "Total Deaths",
+         color = "Years",
+         title = "Weekly deaths from selected causes",
+         subtitle = "Panels ordered by number of deaths. Raw Counts.")
+```
+
+---
+
+# Panel 3
+
+
+```r
+out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-31-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+
+# Panel 4
+
+
+```r
+panel_ordering &lt;- order_panels(st = "North Carolina")
+
+out &lt;- df %&gt;%
+    filter(year &lt; 2021) %&gt;%
+    filter(jurisdiction %in% "North Carolina",
+           year == 2020,
+           cause %nin% c("All Cause", "COVID-19 Multiple cause",
+                         "COVID-19 Underlying"), !is.na(pct_diff)) %&gt;%
+    group_by(week) %&gt;%
+    filter(!(week &gt; nwks)) %&gt;%
+    mutate(ov_un = pct_diff &gt; 0) %&gt;%
+    left_join(panel_ordering, by = "cause") %&gt;%
+    ggplot(aes(x = week, y = pct_diff/100, fill = ov_un)) +
+    geom_col() +
+    scale_x_continuous(breaks = c(1, seq(10, nwks, 10)), labels = as.character(c(1, seq(10, nwks, 10)))) +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_manual(values = c("gray40", "firebrick")) +
+    guides(fill = "none") +
+    facet_wrap(~ cause_ord, ncol = 2, labeller = label_wrap_gen(25)) +
+    labs(x = "Week of the Year",
+         y = "Percent",
+         title = "Percent difference from 2015-2019 average")
+```
+
+---
+
+# Panel 4
+
+
+```r
+out
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-33-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Now the fun() part
+
+
+```r
+patch_state_count &lt;- function(state) {
+
+  out &lt;- df %&gt;%
+    filter(year &lt; 2021, jurisdiction %in% state, cause == "All Cause") %&gt;%
+    group_by(year, week) %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(!(year == 2020 &amp; week &gt; nwks)) %&gt;%
+    ggplot(aes(x = week, y = n, color = yr_ind, group = year)) +
+    geom_line(size = 0.9) +
+    scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+    scale_x_continuous(breaks = month_label$wk_num, labels = month_label$month_lab) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = NULL,
+         y = "Total Deaths",
+         color = "Years",
+         title = "Weekly recorded deaths from all causes",
+         subtitle = "Raw Counts. Provisional Data.")
+
+  out
+
+}
+```
+
+---
+
+# Wrap each plot as a function that creates it
+
+
+```r
+patch_state_covid &lt;- function(state) {
+
+  out &lt;- df %&gt;%
+    filter(year &lt; 2021) %&gt;%
+    filter(jurisdiction %in% state, cause %in% c("COVID-19 Multiple cause")) %&gt;%
+    group_by(year, week) %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(year == 2020) %&gt;%
+    ggplot(aes(x = week, y = n, group = year)) +
+    geom_col(fill = "gray30") +
+    scale_x_continuous(breaks = c(1, 10, 20, 30, 40, 50),
+                       labels = as.character(c(1, 10, 20, 30, 40, 50)),
+                       limits = c(1, 52)) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = "Week of the Year",
+         y = "Total Deaths",
+         color = "Years",
+         subtitle = "Raw counts.",
+         title = "Weekly deaths recorded as COVID-19 (Multiple cause)")
+
+  out
+
+}
+```
+
+---
+
+
+# Wrap each plot as a function that creates it
+
+
+```r
+patch_state_cause &lt;- function(state, nc = 2) {
+
+  panel_ordering &lt;- order_panels(st = state)
+
+  out &lt;- df %&gt;%
+    filter(year &lt; 2021,
+           jurisdiction == state,
+           cause %nin% c("All Cause", "COVID-19 Multiple cause", "COVID-19 Underlying")) %&gt;%
+    group_by(cause, year, week) %&gt;%
+    summarize(deaths = sum(n, na.rm = TRUE), .groups = "drop") %&gt;%
+    mutate(yr_ind = year %in% 2020) %&gt;%
+    filter(!(year == 2020 &amp; week &gt; nwks)) %&gt;%
+    left_join(panel_ordering, by = "cause") %&gt;%
+    ggplot(aes(x = week, y = deaths, color = yr_ind)) +
+    geom_line(size = 0.9, mapping = aes(group = year)) +
+    scale_color_manual(values = c("gray70", "firebrick"), labels = c("2015-2019", "2020")) +
+    scale_x_continuous(breaks = c(1, 10, 20, 30, 40, 50), labels = as.character(c(1, 10, 20, 30, 40, 50))) +
+    scale_y_continuous(labels = scales::comma) +
+    facet_wrap(~ cause_ord, ncol = nc, labeller = label_wrap_gen(25)) +
+    labs(x = "Week of the Year",
+         y = "Total Deaths",
+         color = "Years",
+         title = "Weekly deaths from selected causes",
+         subtitle = "Panels ordered by number of deaths. Raw Counts.")
+
+  out
+}
+```
+
+---
+
+
+# Wrap each plot as a function that creates it
+
+
+
+```r
+patch_state_percent &lt;- function(state, nc = 2){
+
+  panel_ordering &lt;- order_panels(st = state)
+
+  out &lt;- df %&gt;%
+    filter(year &lt; 2021) %&gt;%
+    filter(jurisdiction %in% state,
+           year == 2020,
+           cause %nin% c("All Cause", "COVID-19 Multiple cause",
+                         "COVID-19 Underlying"), !is.na(pct_diff)) %&gt;%
+    group_by(week) %&gt;%
+    filter(!(week &gt; nwks)) %&gt;%
+    mutate(ov_un = pct_diff &gt; 0) %&gt;%
+    left_join(panel_ordering, by = "cause") %&gt;%
+    ggplot(aes(x = week, y = pct_diff/100, fill = ov_un)) +
+    geom_col() +
+    scale_x_continuous(breaks = c(1, seq(10, nwks, 10)), labels = as.character(c(1, seq(10, nwks, 10)))) +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_manual(values = c("gray40", "firebrick")) +
+    guides(fill = "none") +
+    facet_wrap(~ cause_ord, ncol = nc, labeller = label_wrap_gen(25)) +
+    labs(x = "Week of the Year",
+         y = "Percent",
+         title = "Percent difference from 2015-2019 average")
+
+  out
+}
+```
+
+# Now wrap those up too 
+
+
+```r
+make_patchplot &lt;- function(state){
+
+  if(state == "New York")  {
+    state_title &lt;- paste(state, "(Excluding New York City)")
+  } else
+  {
+    state_title &lt;- state
+  }
+
+  timestamp &lt;-  lubridate::stamp("March 1, 1999", "%B %d, %Y")(lubridate::ymd(Sys.Date()))
+
+
+  (patch_state_count(state) + theme(plot.margin = unit(c(5,0,0,0), "pt"))) /
+    patch_state_covid(state) /
+    (patch_state_cause(state) + (patch_state_percent(state))) +
+    plot_layout(heights = c(2, 0.5, 4), guides = 'collect') +
+    plot_annotation(
+      title = state_title,
+      caption = paste0("Graph: @kjhealy Data: CDC. This graph was made on ", timestamp, "."),
+      theme = theme(plot.title = element_text(size = rel(2), hjust = 0, face = "plain")))
+}
+```
+
+---
+
+# Now we can do this
+
+
+```r
+p_out &lt;- make_patchplot("New York City")
+```
+
+---
+
+layout: false
+class: main-title main-title-inv
+
+![:scale 40%](img/nyc_patchplot.png)
+
+---
+
+![:scale 100%](img/nyc_patchplot.png)
+
+---
+
+layout: true
+class: title title-1
+
+---
+
+# But we're not done yet!
+
+
+```r
+states &lt;- states %&gt;%
+  mutate(fname = paste0(here::here("figures", tolower(jurisdiction)), "_patch"),
+         fname = stringr::str_replace_all(fname, " ", "_"))
+
+states
+```
+
+```
+## # A tibble: 54 × 2
+##    jurisdiction         fname                                                   
+##    &lt;chr&gt;                &lt;chr&gt;                                                   
+##  1 Alabama              /Users/kjhealy/Documents/talks/sta-313-guest/figures/al…
+##  2 Alaska               /Users/kjhealy/Documents/talks/sta-313-guest/figures/al…
+##  3 Arizona              /Users/kjhealy/Documents/talks/sta-313-guest/figures/ar…
+##  4 Arkansas             /Users/kjhealy/Documents/talks/sta-313-guest/figures/ar…
+##  5 California           /Users/kjhealy/Documents/talks/sta-313-guest/figures/ca…
+##  6 Colorado             /Users/kjhealy/Documents/talks/sta-313-guest/figures/co…
+##  7 Connecticut          /Users/kjhealy/Documents/talks/sta-313-guest/figures/co…
+##  8 Delaware             /Users/kjhealy/Documents/talks/sta-313-guest/figures/de…
+##  9 District of Columbia /Users/kjhealy/Documents/talks/sta-313-guest/figures/di…
+## 10 Florida              /Users/kjhealy/Documents/talks/sta-313-guest/figures/fl…
+## # … with 44 more rows
+```
+
+---
+
+# Map the function to the jurisdictions
+
+
+```r
+out_patch &lt;- states %&gt;%
+  mutate(patch_plot = map(jurisdiction, make_patchplot))
+
+out_patch
+```
+
+```
+## # A tibble: 54 × 3
+##    jurisdiction         fname                                         patch_plot
+##    &lt;chr&gt;                &lt;chr&gt;                                         &lt;list&gt;    
+##  1 Alabama              /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  2 Alaska               /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  3 Arizona              /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  4 Arkansas             /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  5 California           /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  6 Colorado             /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  7 Connecticut          /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  8 Delaware             /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+##  9 District of Columbia /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+## 10 Florida              /Users/kjhealy/Documents/talks/sta-313-guest… &lt;patchwrk&gt;
+## # … with 44 more rows
+```
+
+---
+
+# Map the function to the jurisdictions
+
+
+```r
+out_patch %&gt;% 
+  filter(jurisdiction == "North Carolina") %&gt;% 
+  pull(patch_plot)
+```
+
+```
+## [[1]]
+```
+
+&lt;img src="facets_compounding_files/figure-html/unnamed-chunk-42-1.png" width="576" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Walk out the results to a folder
+
+
+```r
+## Be patient
+walk2(paste0(out_patch$fname, ".png"),
+      out_patch$patch_plot, ggsave, height = 16, width = 9, dpi = 200)
+```
+
+---
+
+# Et voila
+
+
+```r
+fs::dir_tree("figures")
+```
+
+``` r
+&gt; fs::dir_tree("figures")
+figures
+├── alabama_patch.png
+├── alaska_patch.png
+├── arizona_patch.png
+├── arkansas_patch.png
+├── california_patch.png
+├── colorado_patch.png
+├── connecticut_patch.png
+├── delaware_patch.png
+├── district_of_columbia_patch.png
+├── florida_patch.png
+├── georgia_patch.png
+├── hawaii_patch.png
+├── idaho_patch.png
+├── illinois_patch.png
+
+```
+
+
+
+
+
+
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="../libs/remark-latest.min.js"></script>
